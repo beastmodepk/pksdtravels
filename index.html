@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PK-SD Travels</title>
+<meta name="description" content="PK-SD Travels — Parthey & Shannon's travel journal. Every trip its own circle, glued together; every hike in one place.">
+<link rel="stylesheet" href="assets/spices.css">
+</head>
+<body>
+  <!-- Backdrop: newest trip cover (set by JS) over a soft gradient. Photos live in Cloudflare R2, never in this repo. -->
+  <div class="backdrop" aria-hidden="true">
+    <img id="backdropImg" alt="" hidden>
+    <div class="backdrop-gradient"></div>
+  </div>
+
+  <!-- Glass pill nav: brand + Home / About blended into one pill, Khanderia-style -->
+  <header class="nav-pill glass">
+    <button class="brand" data-nav="home" aria-label="PK-SD Travels — home">
+      <span class="brand-pk">PK</span><span class="brand-dash">–</span><span class="brand-sd">SD</span> <span class="brand-travels">Travels</span>
+    </button>
+    <nav>
+      <button data-nav="home" class="nav-btn is-active" id="navHome">Home</button>
+      <button data-nav="about" class="nav-btn" id="navAbout">About</button>
+    </nav>
+  </header>
+
+  <main id="app" class="app">
+    <!-- HOME: glued circles cluster -->
+    <section id="view-home">
+      <div id="cluster" class="cluster" aria-label="Trips"></div>
+      <div id="emptyNote" class="glass empty-note" hidden>
+        <h1>Our travels, one circle at a time</h1>
+        <p>No trips yet — the first trip will appear here as its own circle, and every trip after it glues onto the cluster. Day trips live in the <strong>Hikes</strong> circle.</p>
+      </div>
+    </section>
+
+    <!-- TRIP DETAIL -->
+    <section id="view-trip" hidden></section>
+
+    <!-- HIKES COLLECTION -->
+    <section id="view-hikes" hidden></section>
+
+    <!-- ABOUT -->
+    <section id="view-about" hidden>
+      <div class="glass sheet">
+        <h1>About</h1>
+        <p><strong>PK-SD Travels</strong> — Parthey &amp; Shannon's travel journal. Every trip gets its own circle on the home page, glued to all the others; hikes are day trips, so they all live together inside the one Hikes circle.</p>
+        <p>Only real trips and hikes appear here — no examples, no placeholders. New ones join as the travels go on.</p>
+        <button class="glass-btn" data-nav="home">← Back to the circles</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/spices.js"></script>
+</body>
+</html>
