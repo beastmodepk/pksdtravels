@@ -138,19 +138,12 @@ a.glass-btn{text-decoration:none;display:inline-block}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:.4rem}
 .gallery img{width:100%;height:150px;object-fit:cover;border-radius:16px;box-shadow:0 10px 26px rgba(16,42,67,.2)}
 .detail-head{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:18px}
-.hike-card{display:flex;gap:16px;padding:1.1rem 0;border-top:1px solid rgba(20,35,46,.14)}
-.hike-card:first-of-type{border-top:0}
-.hike-thumb{width:118px;height:118px;flex:0 0 auto;border-radius:50%;object-fit:cover;box-shadow:0 10px 26px rgba(16,42,67,.22)}
-.hike-body{flex:1;min-width:0}
-.hike-body h3{margin:.1rem 0 .25rem}
-.hike-body p{line-height:1.55;margin:.3rem 0;white-space:pre-wrap}
-.mini-gallery{display:flex;gap:8px;flex-wrap:wrap;margin-top:.5rem}
-.mini-gallery img{width:74px;height:74px;object-fit:cover;border-radius:12px}
+.hikes-head{margin:18px auto 0}
+.sheet p{line-height:1.6;white-space:pre-wrap}
 
 @media (max-width:560px){
   .brand{font-size:1.08rem}
   .nav-btn{padding:.4rem .7rem}
   .circle{margin:-12px -9px}
-  .hike-card{flex-direction:column}
   .sheet{padding:1.2rem}
 }

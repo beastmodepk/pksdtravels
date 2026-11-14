@@ -69,7 +69,7 @@ Google Photos albums remain the master archive: each trip/hike can carry an `alb
 4. Commit + push to `main`. Pages redeploys automatically.
 
 ### A hike
-Same, but the object goes in `hikes` and the photos under `hikes/<slug>/`. All hikes appear inside the single Hikes circle — never as their own circle.
+Same, but the object goes in `hikes` and the photos under `hikes/<slug>/`. Opening the Hikes circle shows every hike as its own circle in a glued cluster; tapping one opens that hike's detail (notes, gallery, album link).
 
 ### Photos only (to an existing trip/hike)
 Upload the new files to that slug's R2 folder with the next numbers, then append the new paths to its `photos` list in `data/places.json` and push.

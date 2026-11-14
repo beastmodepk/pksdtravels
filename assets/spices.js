@@ -37,7 +37,7 @@
   /* ---------- views ---------- */
   function show(view) {
     state.view = view;
-    ["home", "trip", "hikes", "about"].forEach(function (v) {
+    ["home", "trip", "hikes", "hike", "about"].forEach(function (v) {
       var el = document.getElementById("view-" + v);
       if (el) el.hidden = v !== view;
     });
@@ -144,35 +144,60 @@
     show("trip");
   }
 
-  /* ---------- hikes collection ---------- */
+  /* ---------- hikes: a glued cluster of hike circles (never a list) ---------- */
+  function hikeCircle(h, i) {
+    var btn = document.createElement("button");
+    var size = circleSize(i + 2);
+    btn.className = "circle";
+    btn.style.width = btn.style.height = size + "px";
+    btn.setAttribute("aria-label", h.name);
+    var cover = resolvePhoto(h.cover);
+    btn.innerHTML =
+      (cover
+        ? '<img src="' + esc(cover) + '" alt="' + esc(h.name) + '" loading="lazy">'
+        : '<span class="circle-fallback">🥾</span>') +
+      '<span class="circle-name">' + esc(h.name) + "</span>";
+    btn.addEventListener("click", function () { openHike(h.slug); });
+    return btn;
+  }
+
   function openHikes() {
     var hikes = state.data.hikes || [];
-    var body;
-    if (!hikes.length) {
-      body = "<p>No hikes yet — day-trip hikes will be added here, all in this one collection.</p>";
-    } else {
-      body = hikes.map(function (h) {
-        var cover = resolvePhoto(h.cover);
-        return '<div class="hike-card">' +
-          (cover ? '<img class="hike-thumb" src="' + esc(cover) + '" alt="' + esc(h.name) + '" loading="lazy">' : "") +
-          '<div class="hike-body"><h3>' + esc(h.name) + "</h3>" +
-          '<p class="meta-line">' + esc([h.where, fmtDate(h.date)].filter(Boolean).join(" · ")) + "</p>" +
-          (h.notes ? "<p>" + esc(h.notes) + "</p>" : "") +
-          ((h.photos && h.photos.length)
-            ? '<div class="mini-gallery">' + h.photos.map(function (p) {
-                return '<img src="' + esc(resolvePhoto(p)) + '" alt="" loading="lazy">';
-              }).join("") + "</div>"
-            : "") +
-          albumBtn(h.albumUrl) +
-          "</div></div>";
-      }).join("");
-    }
-    document.getElementById("view-hikes").innerHTML =
+    var section = document.getElementById("view-hikes");
+    section.innerHTML =
       '<div class="detail-head"><button class="glass-btn" data-back>← All circles</button></div>' +
-      '<div class="glass sheet"><h1>🥾 Hikes</h1>' +
-      '<p class="meta-line">Day trips — every hike together in one place.</p>' + body + "</div>";
+      '<div class="glass empty-note hikes-head"><h1>🥾 Hikes</h1>' +
+      '<p>Day trips — every hike its own circle, glued together.</p></div>' +
+      '<div class="cluster" id="hikeCluster"></div>' +
+      (hikes.length ? "" :
+        '<div class="glass empty-note"><p>No hikes yet — the first hike will appear here as its own circle.</p></div>');
+    var cluster = document.getElementById("hikeCluster");
+    hikes.forEach(function (h, i) { cluster.appendChild(hikeCircle(h, i)); });
     bindBack();
     show("hikes");
+  }
+
+  /* ---------- one hike's detail ---------- */
+  function openHike(slug) {
+    var h = (state.data.hikes || []).filter(function (x) { return x.slug === slug; })[0];
+    if (!h) return;
+    var cover = resolvePhoto(h.cover);
+    document.getElementById("view-hike").innerHTML =
+      '<div class="detail-head"><button class="glass-btn" data-back-hikes>← All hikes</button>' +
+      '<button class="glass-btn" data-back>← All circles</button></div>' +
+      '<div class="glass sheet">' +
+      "<h1>" + esc(h.name) + "</h1>" +
+      '<p class="meta-line">' + esc([h.where, fmtDate(h.date)].filter(Boolean).join(" · ")) + "</p>" +
+      (cover ? '<img class="cover-photo" src="' + esc(cover) + '" alt="' + esc(h.name) + '">' : "") +
+      albumBtn(h.albumUrl) +
+      (h.notes ? "<h2>Notes</h2><p>" + esc(h.notes) + "</p>" : "") +
+      ((h.photos && h.photos.length) ? "<h2>Pictures</h2>" + galleryHtml(h.photos) : "") +
+      "</div>";
+    document.querySelectorAll("[data-back-hikes]").forEach(function (b) {
+      b.addEventListener("click", openHikes);
+    });
+    bindBack();
+    show("hike");
   }
 
   function bindBack() {
