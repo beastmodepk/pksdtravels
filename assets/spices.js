@@ -46,20 +46,85 @@
     window.scrollTo({ top: 0 });
   }
 
-  /* ---------- home: glued circles ---------- */
-  var SIZES = [228, 178, 258, 196, 214, 168, 244, 188];
+  /* ---------- a circle of circles ----------
+     Trips sit evenly on a ring around the Hikes hub, each circle glued to
+     its neighbours: adjacent centres are GLUE*d apart (< d, so the circles
+     overlap a touch), which sets the ring radius R = (GLUE*d)/(2*sin(pi/n)).
+     Ring circles also overlap the hub a touch, so the whole composition
+     reads as one stuck-together circle of circles.
+     SCALING RULE: a ring holds only as many circles as fit at the readable
+     base size — when trips overflow ring 1 they go on a SECOND, outer
+     concentric ring (radius += 0.86*d, circles just as big), never on a
+     shrunken inner ring. The finished composition is scaled down only as a
+     last resort to fit a narrow screen. */
+  var GLUE = 0.92;
 
-  function circleSize(i) {
-    var s = SIZES[i % SIZES.length];
-    if (window.innerWidth < 560) s = Math.round(s * 0.62);
-    return s;
+  function baseDiameter() { return window.innerWidth < 560 ? 138 : 190; }
+
+  function availWidth() { return Math.min(window.innerWidth - 28, 1060); }
+
+  // Lay `count` circles of diameter d on concentric rings around a hub of
+  // diameter hubD. Returns { size, hubD, items: [{x, y, d}] } in unscaled px,
+  // centred on (size/2, size/2). centreSingle: a lone circle sits in the
+  // middle (Hikes view) instead of orbiting the hub (home view).
+  function circleOfCircles(count, d, hubD, stageW, centreSingle) {
+    var items = [];
+    if (!count) return { size: hubD, hubD: hubD, items: items };
+    if (count === 1 && centreSingle) {
+      items.push({ x: 0, y: 0, d: d });
+      return { size: Math.max(d, hubD), hubD: hubD, items: items };
+    }
+    var hubTouchR = (hubD + d) / 2 * 0.9; // ring circles overlap the hub a touch
+    var maxR = Math.max(hubTouchR, stageW / 2 - d / 2);
+    // Ring-1 capacity: the largest n whose glued radius still fits the stage.
+    var cap = Math.floor(Math.PI / Math.asin(Math.min(1, (GLUE * d / 2) / maxR)));
+    cap = Math.max(3, cap);
+    var placed = 0, ring = 0, prevR = 0;
+    while (placed < count) {
+      var remaining = count - placed;
+      var n, R;
+      if (ring === 0) {
+        n = Math.min(remaining, cap);
+        R = n === 1 ? hubTouchR
+          : Math.max((GLUE * d) / (2 * Math.sin(Math.PI / n)), hubTouchR);
+      } else {
+        R = prevR + d * 0.86; // outer ring, glued onto the ring inside it
+        // Outer-ring capacity: neighbours stay glued (chord >= 0.8*d).
+        var capOut = Math.floor(Math.PI / Math.asin(Math.min(1, (0.8 * d / 2) / R)));
+        n = Math.min(remaining, Math.max(3, capOut));
+      }
+      var step = (Math.PI * 2) / n;
+      var start = -Math.PI / 2 + ring * (step / 2); // outer rings offset half a step
+      for (var k = 0; k < n; k++) {
+        var a = start + k * step;
+        items.push({ x: Math.cos(a) * R, y: Math.sin(a) * R, d: d });
+      }
+      placed += n; prevR = R; ring++;
+    }
+    var extent = hubD / 2;
+    items.forEach(function (it) {
+      extent = Math.max(extent, Math.sqrt(it.x * it.x + it.y * it.y) + it.d / 2);
+    });
+    return { size: 2 * extent, hubD: hubD, items: items };
   }
 
-  function tripCircle(t, i) {
+  // Position a circle button inside a ring stage from a layout item.
+  function placeCircle(stage, btn, layout, item, scale) {
+    var s = Math.round(item.d * scale);
+    btn.style.width = btn.style.height = s + "px";
+    btn.style.left = ((layout.size / 2 + item.x) * scale) + "px";
+    btn.style.top = ((layout.size / 2 + item.y) * scale) + "px";
+    stage.appendChild(btn);
+  }
+
+  function sizeStage(stage, layout, scale) {
+    stage.style.width = Math.round(layout.size * scale) + "px";
+    stage.style.height = Math.round(layout.size * scale) + "px";
+  }
+
+  function tripCircle(t) {
     var btn = document.createElement("button");
-    var size = circleSize(i);
     btn.className = "circle";
-    btn.style.width = btn.style.height = size + "px";
     btn.setAttribute("aria-label", t.name);
     var cover = resolvePhoto(t.cover);
     var stamp = t.kind === "wishlist"
@@ -78,9 +143,7 @@
   function hikesCircle() {
     var hikes = state.data.hikes || [];
     var btn = document.createElement("button");
-    var size = circleSize(state.data.trips.length + 1);
     btn.className = "circle circle-hikes";
-    btn.style.width = btn.style.height = size + "px";
     btn.setAttribute("aria-label", "Hikes — all day-trip hikes");
     var first = hikes.length ? resolvePhoto(hikes[0].cover) : "";
     btn.innerHTML =
@@ -94,11 +157,26 @@
   }
 
   function renderHome() {
-    var cluster = document.getElementById("cluster");
-    cluster.innerHTML = "";
+    var stage = document.getElementById("cluster");
+    stage.innerHTML = "";
     var trips = state.data.trips || [];
-    trips.forEach(function (t, i) { cluster.appendChild(tripCircle(t, i)); });
-    cluster.appendChild(hikesCircle()); // Hikes always present, glued into the cluster
+    var d = baseDiameter();
+    var hubD = Math.round(d * 0.94);
+    var stageW = Math.min(availWidth(), 700);
+    var layout = circleOfCircles(trips.length, d, hubD, stageW, false);
+    var scale = Math.min(1, stageW / layout.size);
+    sizeStage(stage, layout, scale);
+
+    // The Hikes hub first, at the centre — the ring is laid over its edge.
+    var hub = hikesCircle();
+    var hubPx = Math.round(layout.hubD * scale);
+    hub.style.width = hub.style.height = hubPx + "px";
+    hub.style.left = hub.style.top = (layout.size / 2 * scale) + "px";
+    stage.appendChild(hub);
+
+    trips.forEach(function (t, i) {
+      placeCircle(stage, tripCircle(t), layout, layout.items[i], scale);
+    });
 
     document.getElementById("emptyNote").hidden = trips.length > 0;
 
@@ -144,12 +222,10 @@
     show("trip");
   }
 
-  /* ---------- hikes: a glued cluster of hike circles (never a list) ---------- */
-  function hikeCircle(h, i) {
+  /* ---------- hikes: a circle of hike circles (never a list) ---------- */
+  function hikeCircle(h) {
     var btn = document.createElement("button");
-    var size = circleSize(i + 2);
     btn.className = "circle";
-    btn.style.width = btn.style.height = size + "px";
     btn.setAttribute("aria-label", h.name);
     var cover = resolvePhoto(h.cover);
     btn.innerHTML =
@@ -167,12 +243,31 @@
     section.innerHTML =
       '<div class="detail-head"><button class="glass-btn" data-back>← All circles</button></div>' +
       '<div class="glass empty-note hikes-head"><h1>🥾 Hikes</h1>' +
-      '<p>Day trips — every hike its own circle, glued together.</p></div>' +
-      '<div class="cluster" id="hikeCluster"></div>' +
+      '<p>Day trips — every hike its own circle, in a circle of circles.</p></div>' +
+      '<div class="ring-stage" id="hikeCluster"></div>' +
       (hikes.length ? "" :
         '<div class="glass empty-note"><p>No hikes yet — the first hike will appear here as its own circle.</p></div>');
-    var cluster = document.getElementById("hikeCluster");
-    hikes.forEach(function (h, i) { cluster.appendChild(hikeCircle(h, i)); });
+    var stage = document.getElementById("hikeCluster");
+    if (hikes.length) {
+      var d = baseDiameter();
+      var labelD = Math.round(d * 0.55); // small glass HIKES disc at the centre
+      var stageW = Math.min(availWidth(), 700);
+      var layout = circleOfCircles(hikes.length, d, labelD, stageW, true);
+      var scale = Math.min(1, stageW / layout.size);
+      sizeStage(stage, layout, scale);
+      if (hikes.length > 1) {
+        var label = document.createElement("div");
+        label.className = "ring-centre-label";
+        var labelPx = Math.round(layout.hubD * scale);
+        label.style.width = label.style.height = labelPx + "px";
+        label.style.left = label.style.top = (layout.size / 2 * scale) + "px";
+        label.textContent = "🥾 HIKES";
+        stage.appendChild(label);
+      }
+      hikes.forEach(function (h, i) {
+        placeCircle(stage, hikeCircle(h), layout, layout.items[i], scale);
+      });
+    }
     bindBack();
     show("hikes");
   }
@@ -225,5 +320,6 @@
 
   window.addEventListener("resize", function () {
     if (state.view === "home") renderHome();
+    else if (state.view === "hikes") openHikes();
   });
 })();
